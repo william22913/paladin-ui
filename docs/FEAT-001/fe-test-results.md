@@ -4,7 +4,7 @@ Run date: 2026-11-11
 Service: `paladin` · FE repo: `william22913/paladin-ui`
 Branch: `feat/FEAT-001-dev-storefront-v1`
 Tested code commit: `31671ad4e63f2079bf24bdf4a7048f218267f254`
-FE PR: pending
+FE PR: https://github.com/william22913/paladin-ui/pull/1
 
 ## Pinned inputs
 
