@@ -62,6 +62,10 @@ interface State {
   authed: boolean;
   cart: number[];
   lastLogin?: { username: string; password: string };
+  /** Checkout fails as if an owned app slipped into the cart. */
+  ownedAtCheckout?: string[];
+  /** Library and Orders respond empty. */
+  emptyLists?: boolean;
 }
 
 function cartPayload(state: State) {
@@ -183,11 +187,26 @@ async function mockApi(page: Page) {
       return route.fulfill(json(cartPayload(state)));
     }
     if (path === '/checkout' && method === 'POST') {
+      if (state.ownedAtCheckout) {
+        return route.fulfill(
+          json(
+            {
+              error: {
+                code: 'ALREADY_OWNED',
+                message: 'An app in your cart is already owned.',
+                app_names: state.ownedAtCheckout,
+              },
+            },
+            409,
+          ),
+        );
+      }
       const order = orderPayload(state.cart);
       state.cart = [];
       return route.fulfill(json(order, 201));
     }
     if (path === '/library') {
+      if (state.emptyLists) return route.fulfill(json({ apps: [] }));
       return route.fulfill(
         json({
           apps: [
@@ -201,7 +220,9 @@ async function mockApi(page: Page) {
         }),
       );
     }
-    if (path === '/orders') return route.fulfill(json({ orders: [orderPayload([1]).order] }));
+    if (path === '/orders') {
+      return route.fulfill(json({ orders: state.emptyLists ? [] : [orderPayload([1]).order] }));
+    }
     if (path === '/orders/PLD-1042') return route.fulfill(json(orderPayload([1])));
     return route.fulfill(json({ error: { code: 'NOT_FOUND', message: path } }, 404));
   });
@@ -435,6 +456,37 @@ test('an empty cart blocks checkout and returns to the cart', async ({ page }) =
   await expect(page).toHaveURL('/cart');
   await expect(page.getByText('Your cart is empty.')).toBeVisible();
   await expect(page.getByRole('link', { name: 'Proceed to checkout' })).toHaveCount(0);
+});
+
+test('checkout names already-owned apps and does not empty the cart', async ({ page }) => {
+  const state = await mockApi(page);
+  await signIn(page);
+  await page
+    .getByRole('region', { name: 'Find an app' })
+    .getByRole('button', { name: 'Add Cadence to cart' })
+    .click();
+  state.ownedAtCheckout = ['Cadence'];
+
+  await page.goto('/checkout');
+  await page.getByRole('button', { name: 'Place order' }).click();
+  await expect(
+    page.getByText('You already own Cadence. Remove them from your cart to continue.'),
+  ).toBeVisible();
+  await expect(page).toHaveURL('/checkout');
+
+  await page.goto('/cart');
+  await expect(page.getByRole('link', { name: 'Cadence', exact: true })).toBeVisible();
+});
+
+test('library and orders show empty states with no purchases', async ({ page }) => {
+  const state = await mockApi(page);
+  await signIn(page);
+  state.emptyLists = true;
+
+  await page.goto('/library');
+  await expect(page.getByText('Your library is empty.')).toBeVisible();
+  await page.goto('/orders');
+  await expect(page.getByText('No orders yet.')).toBeVisible();
 });
 
 test('unknown app and order ids show not-found states', async ({ page }) => {
