@@ -1,0 +1,61 @@
+/*
+ * Paladin design tokens (UIMap `## Design tokens`). Fonts are imported from
+ * @fontsource in main.tsx so Vite hashes the real woff2 files.
+ */
+
+:root {
+  color-scheme: dark;
+
+  --canvas: #0b0b0b;
+  --canvas-deep: #000000;
+  --surface: #141414;
+  --surface-raised: #1c1c1c;
+  --hairline: #2a2a2a;
+  --border-control: #6a6a6a;
+  --text: #f5f5f5;
+  --text-secondary: #b3b3b3;
+  --text-muted: #8c8c8c;
+  --action: #ffffff;
+  --action-hover: #e8e8e8;
+  --on-action: #0b0b0b;
+  --on-image: #ffffff;
+  --error: #f26b5e;
+  --success: #4ade80;
+  --warning: #e8b84b;
+  --focus: #ffffff;
+  --overlay: rgba(0, 0, 0, 0.72);
+  --scrim: linear-gradient(rgba(0, 0, 0, 0.15), rgba(0, 0, 0, 0.72));
+
+  --font-display: 'Oswald', 'Arial Narrow', sans-serif;
+  --font-body: 'Inter', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --font-mono: ui-monospace, SFMono-Regular, Menlo, monospace;
+
+  --container: 1440px;
+  --gutter: 64px;
+  --header-h: 72px;
+  --section-pad: 128px;
+  --measure: 720px;
+
+  --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-menu: cubic-bezier(0.32, 0.72, 0, 1);
+  --ease-close: cubic-bezier(0.23, 1, 0.32, 1);
+
+  --z-header: 20;
+  --z-menu: 40;
+  --z-skip: 60;
+}
+
+@media (max-width: 1023px) {
+  :root {
+    --gutter: 40px;
+    --section-pad: 96px;
+  }
+}
+
+@media (max-width: 767px) {
+  :root {
+    --gutter: 24px;
+    --header-h: 60px;
+    --section-pad: 56px;
+  }
+}

@@ -6,7 +6,7 @@ Paladin storefront (React + Vite + TypeScript). Plain React with CSS Modules;
 
 ## Commands
 
-- `npm run dev` — Vite dev server (proxies `/api` to `VITE_API_PROXY_ORIGIN`, default `http://localhost:8080`)
+- `npm run dev` — Vite dev server (proxies `/api` to `http://localhost:8080`)
 - `npm run lint` — ESLint
 - `npm run typecheck` — `tsc --noEmit`
 - `npm test` — Vitest unit/component tests
