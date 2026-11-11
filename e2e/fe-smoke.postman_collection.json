@@ -1,0 +1,35 @@
+{
+  "info": {
+    "name": "paladin-ui nginx smoke",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "SPA shell is served",
+      "request": { "method": "GET", "url": "http://web/" },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('200', () => pm.response.to.have.status(200));",
+              "pm.test('mount point', () => pm.expect(pm.response.text()).to.include('id=\"root\"'));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Unknown route falls back to the shell",
+      "request": { "method": "GET", "url": "http://web/apps/42" },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": ["pm.test('200', () => pm.response.to.have.status(200));"]
+          }
+        }
+      ]
+    }
+  ]
+}
