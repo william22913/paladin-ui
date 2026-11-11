@@ -24,6 +24,7 @@ function CardSkeleton() {
   return (
     <div className={styles.cardSkeleton}>
       <Skeleton className={styles.skeletonCover} />
+      <Skeleton className={styles.skeletonCoverBadge} />
       <div className={styles.skeletonBody}>
         <Skeleton className={styles.skeletonLineShort} />
         <Skeleton className={styles.skeletonLine} />

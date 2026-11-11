@@ -5,6 +5,7 @@ import type {
   CartItem,
   Category,
   LibraryEntry,
+  MoveToCartResult,
   Order,
   OrderItem,
 } from './types';
@@ -29,8 +30,9 @@ function categoryOf(raw: Raw): { name: string; slug: string } {
       slug: asString(record.slug),
     };
   }
-  const name = asString(category);
-  return { name, slug: asString(raw.category_slug, name.toLowerCase().replace(/\s+/g, '-')) };
+  // The contract sends category as the slug plus a display category_name.
+  const name = asString(raw.category_name, asString(category));
+  return { name, slug: asString(raw.category_slug, asString(category).toLowerCase().replace(/\s+/g, '-')) };
 }
 
 function screenshotsOf(raw: Raw): string[] {
@@ -62,6 +64,7 @@ export function normalizeApp(raw: Raw): AppSummary {
     coverUrl: asString(raw.cover_url),
     isOwned: asBool(raw.is_owned),
     isInCart: asBool(raw.is_in_cart),
+    isWishlisted: asBool(raw.is_wishlisted),
   };
 }
 
@@ -146,6 +149,15 @@ export function normalizeOrder(payload: unknown): Order {
     createdAt: asString(source.created_at ?? source.order_date),
     totalIdr: asNumber(source.total_idr),
     items,
+  };
+}
+
+/** Move returns both resources so one response refreshes the list and the cart badge. */
+export function normalizeMoveToCart(payload: unknown): MoveToCartResult {
+  const record = asRecord(payload);
+  return {
+    wishlist: normalizeCatalog(record.wishlist),
+    cart: normalizeCart(record.cart),
   };
 }
 

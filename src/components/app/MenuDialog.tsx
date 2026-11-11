@@ -7,6 +7,7 @@ import styles from './app.module.css';
 
 const links = [
   { to: '/', label: 'Catalog' },
+  { to: '/wishlist', label: 'Wishlist' },
   { to: '/library', label: 'My Library' },
   { to: '/orders', label: 'Orders' },
 ];

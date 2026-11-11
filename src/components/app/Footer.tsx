@@ -12,6 +12,7 @@ export function Footer() {
         <span className={styles.footerWordmark}>Paladin</span>
         <nav className={styles.footerNav} aria-label="Footer">
           <Link to="/">Catalog</Link>
+          <Link to="/wishlist">Wishlist</Link>
           <Link to="/library">My Library</Link>
           <Link to="/orders">Orders</Link>
           <button type="button" onClick={() => void logout()}>

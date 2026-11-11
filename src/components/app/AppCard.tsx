@@ -8,6 +8,7 @@ import { Button } from '../ui/Button';
 import { OwnedTag, InCartTag } from '../ui/Tag';
 import { PriceLabel } from '../ui/PriceLabel';
 import { Rating } from '../ui/Rating';
+import { WishlistButton } from './WishlistButton';
 import { cx } from '../../helpers/cx';
 import styles from './app.module.css';
 
@@ -24,6 +25,7 @@ export function AppCard({ app, priority }: AppCardProps) {
   const { cart, count, add } = useCart();
   const [phase, setPhase] = useState<Phase>('idle');
   const [message, setMessage] = useState('');
+  const [wishlistMessage, setWishlistMessage] = useState('');
   const timer = useRef<number | null>(null);
 
   useEffect(
@@ -59,6 +61,7 @@ export function AppCard({ app, priority }: AppCardProps) {
       <Link className={styles.stretch} to={`/apps/${app.id}`} aria-label={`View ${app.name}`} />
       <div className={styles.cover}>
         <ArtImage src={app.coverUrl} alt="" eager={priority} />
+        <WishlistButton app={app} onError={setWishlistMessage} />
       </div>
       <div className={styles.cardBody}>
         <span className={styles.cardCategory}>{app.category}</span>
@@ -88,9 +91,9 @@ export function AppCard({ app, priority }: AppCardProps) {
               {phase === 'adding' ? 'Adding' : phase === 'added' ? 'Added' : 'Add to cart'}
             </Button>
           )}
-          {message ? (
+          {message || wishlistMessage ? (
             <p className={styles.cardError} role="alert">
-              {message}
+              {message || wishlistMessage}
             </p>
           ) : null}
         </div>

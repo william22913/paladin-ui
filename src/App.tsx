@@ -11,6 +11,7 @@ import { LoginPage } from './pages/LoginPage';
 import { NotFoundPage } from './pages/NotFoundPage';
 import { OrderPage } from './pages/OrderPage';
 import { OrdersPage } from './pages/OrdersPage';
+import { WishlistPage } from './pages/WishlistPage';
 
 /** MO-012: new routes start at the top; in-page query changes never scroll. */
 function ScrollToTop() {
@@ -36,6 +37,7 @@ export function App() {
         >
           <Route path="/" element={<HomePage />} />
           <Route path="/apps/:appId" element={<AppDetailPage />} />
+          <Route path="/wishlist" element={<WishlistPage />} />
           <Route path="/cart" element={<CartPage />} />
           <Route path="/checkout" element={<CheckoutPage />} />
           <Route path="/orders" element={<OrdersPage />} />

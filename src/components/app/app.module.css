@@ -504,11 +504,70 @@
   color: var(--error);
   font-size: 13px;
   line-height: 1.5;
+  animation: wishlist-fade-in 160ms ease-out;
+}
+
+@keyframes wishlist-fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
 }
 
 .cardButton {
   width: 100%;
   min-height: 44px;
+}
+
+.wishlistIcon {
+  display: inline-flex;
+  animation: wishlist-icon-in 160ms ease-out;
+}
+
+@keyframes wishlist-icon-in {
+  from {
+    opacity: 0.6;
+    transform: scale(0.92);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.wishlistOverlay {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  z-index: 2;
+  background: var(--canvas);
+  border-color: var(--border-control);
+}
+
+.wishlistOverlay.wishlistOverlaySaved {
+  border-color: var(--text);
+}
+
+.wishlistOverlay.wishlistOverlay:hover:not(:disabled) {
+  background: var(--canvas);
+  border-color: var(--border-control);
+}
+
+.wishlistOverlaySaved.wishlistOverlaySaved:hover:not(:disabled) {
+  border-color: var(--text);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .wishlistOverlay.wishlistOverlay:hover:not(:disabled) {
+    background: var(--surface-raised);
+    border-color: var(--text);
+  }
+}
+
+.wishlistOverlay[aria-busy='true'] {
+  cursor: progress;
 }
 
 /* ---------- featured rail ---------- */
@@ -715,6 +774,29 @@
   color: var(--error);
   font-size: 13px;
   line-height: 1.5;
+  animation: wishlist-fade-in 160ms ease-out;
+}
+
+.panelActions {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.panelWishlist {
+  min-height: 48px;
+}
+
+.wishlistBlockLabel {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+}
+
+@media (max-width: 767px) {
+  .panelWishlist {
+    min-height: 44px;
+  }
 }
 
 @media (max-width: 767px) {
@@ -1048,4 +1130,172 @@
 
 .lineRemove:disabled {
   opacity: 0.6;
+}
+
+/* ---------- wishlist list ---------- */
+
+.wishlistList {
+  display: flex;
+  flex-direction: column;
+}
+
+.wishlistRow {
+  display: grid;
+  grid-template-columns: 96px minmax(0, 1fr) auto;
+  gap: 20px;
+  padding-block: 24px;
+  border-bottom: 1px solid var(--hairline);
+}
+
+.wishlistRowBusy {
+  cursor: progress;
+}
+
+.wishlistCover {
+  aspect-ratio: 3 / 4;
+  overflow: hidden;
+  background: var(--surface);
+}
+
+.wishlistCover img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.wishlistInfo {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+}
+
+.wishlistName {
+  font-family: var(--font-display);
+  font-weight: 500;
+  font-size: 24px;
+  line-height: 1.05;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.wishlistName a:hover {
+  text-decoration: underline;
+  text-underline-offset: 4px;
+}
+
+.wishlistMeta {
+  color: var(--text-secondary);
+  font-size: 13px;
+}
+
+.wishlistRating {
+  margin-top: 2px;
+}
+
+.wishlistSide {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 10px;
+}
+
+.wishlistTags {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 6px;
+}
+
+.wishlistActions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 2px;
+}
+
+.wishlistMove {
+  min-height: 44px;
+  padding-inline: 16px;
+}
+
+.wishlistRemove {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 44px;
+  color: var(--text-secondary);
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.wishlistRemove:hover:not(:disabled) {
+  color: var(--text);
+}
+
+.wishlistRemove:disabled {
+  opacity: 0.6;
+}
+
+.wishlistMessage {
+  grid-column: 2 / -1;
+  color: var(--error);
+  font-size: 13px;
+  line-height: 1.5;
+  animation: wishlist-fade-in 160ms ease-out;
+}
+
+@media (max-width: 767px) {
+  .wishlistRow {
+    grid-template-columns: 72px minmax(0, 1fr);
+    gap: 14px;
+  }
+
+  .wishlistName {
+    font-size: 20px;
+  }
+
+  .wishlistSide {
+    grid-column: 1 / -1;
+    flex-direction: row;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+  }
+
+  .wishlistTags {
+    justify-content: flex-start;
+  }
+
+  .wishlistActions {
+    margin-left: auto;
+  }
+
+  .wishlistMessage {
+    grid-column: 1 / -1;
+  }
+}
+
+@media (max-width: 480px) {
+  .wishlistSide {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .wishlistActions {
+    width: 100%;
+    flex-direction: column;
+    align-items: stretch;
+    margin-left: 0;
+  }
+
+  .wishlistMove,
+  .wishlistRemove {
+    width: 100%;
+    min-height: 48px;
+    justify-content: center;
+  }
 }

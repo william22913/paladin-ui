@@ -1,5 +1,10 @@
 import { defineConfig, devices } from '@playwright/test';
 
+// Chromium is preinstalled in this environment rather than in Playwright's
+// browser cache, so the launcher is pointed at it when the variable is set.
+declare const process: { env: Record<string, string | undefined> };
+const executablePath = process.env.NEXAI_CHROMIUM_PATH;
+
 export default defineConfig({
   testDir: './e2e',
   fullyParallel: true,
@@ -13,6 +18,7 @@ export default defineConfig({
     trace: 'retain-on-failure',
     // Keeps screenshots and assertions stable; the reduced-motion path is part of the design contract.
     reducedMotion: 'reduce',
+    launchOptions: executablePath ? { executablePath } : {},
   },
   projects: [
     {

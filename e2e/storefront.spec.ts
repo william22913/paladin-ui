@@ -11,6 +11,7 @@ interface MockApp {
   cover_url: string;
   is_owned: boolean;
   is_in_cart: boolean;
+  is_wishlisted: boolean;
 }
 
 const APPS: MockApp[] = [
@@ -25,6 +26,7 @@ const APPS: MockApp[] = [
     cover_url: 'https://picsum.photos/seed/cadence/600/800',
     is_owned: false,
     is_in_cart: false,
+    is_wishlisted: false,
   },
   {
     id: 2,
@@ -37,6 +39,7 @@ const APPS: MockApp[] = [
     cover_url: 'https://picsum.photos/seed/meridian/600/800',
     is_owned: false,
     is_in_cart: false,
+    is_wishlisted: false,
   },
   {
     id: 3,
@@ -49,6 +52,7 @@ const APPS: MockApp[] = [
     cover_url: 'https://picsum.photos/seed/kiln/600/800',
     is_owned: true,
     is_in_cart: false,
+    is_wishlisted: false,
   },
 ];
 
@@ -61,23 +65,42 @@ const CATEGORIES = [
 interface State {
   authed: boolean;
   cart: number[];
+  wishlist: number[];
   lastLogin?: { username: string; password: string };
   /** Checkout fails as if an owned app slipped into the cart. */
   ownedAtCheckout?: string[];
   /** Library and Orders respond empty. */
   emptyLists?: boolean;
+  /** Reports a 20-item cart so the wishlist pre-check can be exercised without 20 fixtures. */
+  cartFull?: boolean;
+}
+
+function appView(state: State, app: MockApp) {
+  return {
+    ...app,
+    is_wishlisted: state.wishlist.includes(app.id),
+    is_in_cart: state.cart.includes(app.id),
+  };
 }
 
 function cartPayload(state: State) {
   const items = state.cart.map((id) => {
     const app = APPS.find((entry) => entry.id === id)!;
-    return { app, app_id: app.id };
+    return { app: appView(state, app), app_id: app.id };
   });
   return {
     items,
-    count: items.length,
+    count: state.cartFull ? 20 : items.length,
     total_idr: items.reduce((sum, item) => sum + item.app.price_idr, 0),
   };
+}
+
+function wishlistPayload(state: State) {
+  const apps = state.wishlist
+    .map((id) => APPS.find((entry) => entry.id === id))
+    .filter((app): app is MockApp => Boolean(app))
+    .map((app) => appView(state, app));
+  return { apps, count: apps.length };
 }
 
 function orderPayload(ids: number[]) {
@@ -109,7 +132,7 @@ const json = (body: unknown, status = 200) => ({
 });
 
 async function mockApi(page: Page) {
-  const state: State = { authed: false, cart: [] };
+  const state: State = { authed: false, cart: [], wishlist: [] };
 
   await page.route('https://picsum.photos/**', (route) => route.abort());
   await page.route('**/api/v1/**', async (route) => {
@@ -141,7 +164,9 @@ async function mockApi(page: Page) {
     if (!state.authed) {
       return route.fulfill(json({ error: { code: 'UNAUTHORIZED', message: 'Sign in.' } }, 401));
     }
-    if (path === '/apps/featured') return route.fulfill(json({ apps: APPS.slice(0, 2) }));
+    if (path === '/apps/featured') {
+      return route.fulfill(json({ apps: APPS.slice(0, 2).map((app) => appView(state, app)) }));
+    }
     if (path === '/categories') return route.fulfill(json({ categories: CATEGORIES }));
     if (path === '/apps' && method === 'GET') {
       const q = (url.searchParams.get('q') ?? '').toLowerCase();
@@ -150,7 +175,7 @@ async function mockApi(page: Page) {
         (app) =>
           (!category || app.category_slug === category) &&
           (!q || app.name.toLowerCase().includes(q)),
-      );
+      ).map((app) => appView(state, app));
       return route.fulfill(json({ apps, count: apps.length }));
     }
     if (/^\/apps\/\d+$/.test(path)) {
@@ -160,7 +185,7 @@ async function mockApi(page: Page) {
       return route.fulfill(
         json({
           app: {
-            ...app,
+            ...appView(state, app),
             version: '2.4',
             description: 'A deliberate instrument for people who listen closely.',
             screenshots: [
@@ -185,6 +210,42 @@ async function mockApi(page: Page) {
       const id = Number(path.split('/').pop());
       state.cart = state.cart.filter((entry) => entry !== id);
       return route.fulfill(json(cartPayload(state)));
+    }
+    if (path === '/wishlist' && method === 'GET') {
+      return route.fulfill(json(wishlistPayload(state)));
+    }
+    if (path === '/wishlist/items' && method === 'POST') {
+      const { app_id } = request.postDataJSON() as { app_id: number };
+      if (!APPS.some((app) => app.id === app_id)) {
+        return route.fulfill(
+          json({ error: { code: 'APP_NOT_FOUND', message: 'That app is no longer in the catalog.' } }, 404),
+        );
+      }
+      if (!state.wishlist.includes(app_id)) state.wishlist.push(app_id);
+      return route.fulfill(json(wishlistPayload(state)));
+    }
+    if (/^\/wishlist\/items\/\d+\/move-to-cart$/.test(path) && method === 'POST') {
+      const id = Number(path.split('/')[3]);
+      const app = APPS.find((entry) => entry.id === id);
+      if (!app) {
+        return route.fulfill(
+          json({ error: { code: 'APP_NOT_FOUND', message: 'That app is no longer in the catalog.' } }, 404),
+        );
+      }
+      if (app.is_owned) {
+        return route.fulfill(json({ error: { code: 'ALREADY_OWNED', message: 'Already owned.' } }, 409));
+      }
+      if (state.cart.length >= 20) {
+        return route.fulfill(json({ error: { code: 'CART_FULL', message: 'Cart is full.' } }, 409));
+      }
+      state.wishlist = state.wishlist.filter((entry) => entry !== id);
+      if (!state.cart.includes(id)) state.cart.push(id);
+      return route.fulfill(json({ wishlist: wishlistPayload(state), cart: cartPayload(state) }));
+    }
+    if (/^\/wishlist\/items\/\d+$/.test(path) && method === 'DELETE') {
+      const id = Number(path.split('/').pop());
+      state.wishlist = state.wishlist.filter((entry) => entry !== id);
+      return route.fulfill(json(wishlistPayload(state)));
     }
     if (path === '/checkout' && method === 'POST') {
       if (state.ownedAtCheckout) {
@@ -315,7 +376,7 @@ test('no console errors across the core pages', async ({ page }) => {
   const errors = watchConsole(page);
   await mockApi(page);
   await signIn(page);
-  for (const path of ['/apps/1', '/cart', '/library', '/orders', '/orders/PLD-1042']) {
+  for (const path of ['/apps/1', '/wishlist', '/cart', '/library', '/orders', '/orders/PLD-1042']) {
     await page.goto(path);
     await expect(page.locator('h1')).toBeVisible();
   }
@@ -449,6 +510,116 @@ test('removing one cart line keeps the other and updates the total', async ({ pa
   await expect(page.getByText('FREE', { exact: true }).first()).toBeVisible();
 });
 
+test('wishlist saves from a card, survives a reload and lists on its page', async ({ page }) => {
+  await mockApi(page);
+  await signIn(page);
+  const catalog = page.getByRole('region', { name: 'Find an app' });
+
+  await catalog.getByRole('button', { name: 'Save Cadence to your wishlist' }).click();
+  await expect(
+    catalog.getByRole('button', { name: 'Remove Cadence from your wishlist' }),
+  ).toHaveAttribute('aria-pressed', 'true');
+
+  await page.reload();
+  await expect(
+    page
+      .getByRole('region', { name: 'Find an app' })
+      .getByRole('button', { name: 'Remove Cadence from your wishlist' }),
+  ).toBeVisible();
+
+  await page.goto('/wishlist');
+  await expect(page.getByRole('heading', { name: 'Wishlist' })).toBeVisible();
+  await expect(page.getByText('1 app')).toBeVisible();
+  await expect(page.getByRole('link', { name: 'Cadence', exact: true })).toBeVisible();
+});
+
+test('wishlist saves from the product page and shows the saved state after a reload', async ({
+  page,
+}) => {
+  await mockApi(page);
+  await signIn(page);
+  await page.goto('/apps/2');
+
+  await page.getByRole('button', { name: 'Save to wishlist' }).click();
+  await expect(page.getByRole('button', { name: 'Saved to wishlist' })).toHaveAttribute(
+    'aria-pressed',
+    'true',
+  );
+
+  await page.reload();
+  await expect(page.getByRole('button', { name: 'Saved to wishlist' })).toHaveAttribute(
+    'aria-pressed',
+    'true',
+  );
+});
+
+test('wishlist removes one item and keeps the rest', async ({ page }) => {
+  const state = await mockApi(page);
+  await signIn(page);
+  state.wishlist = [1, 2];
+
+  await page.goto('/wishlist');
+  await expect(page.getByRole('link', { name: 'Meridian', exact: true })).toBeVisible();
+  await page.getByRole('button', { name: 'Remove Cadence from your wishlist' }).click();
+
+  await expect(page.getByRole('link', { name: 'Cadence', exact: true })).toHaveCount(0);
+  await expect(page.getByRole('link', { name: 'Meridian', exact: true })).toBeVisible();
+  await expect(page.getByText('Removed from your wishlist.', { exact: true })).toBeVisible();
+  await expect(page.getByText('1 app')).toBeVisible();
+});
+
+test('wishlist moves an item to the cart and leaves the list', async ({ page }) => {
+  const state = await mockApi(page);
+  await signIn(page);
+  state.wishlist = [1];
+
+  await page.goto('/wishlist');
+  await page.getByRole('button', { name: 'Move Cadence to cart' }).click();
+
+  await expect(page.getByText('Moved to your cart.')).toBeVisible();
+  await expect(page.getByRole('link', { name: 'Cart, 1 app' })).toBeVisible();
+  await expect(page.getByText('Your wishlist is empty.')).toBeVisible();
+
+  await page.getByRole('link', { name: 'View cart' }).click();
+  await expect(page).toHaveURL('/cart');
+  await expect(page.getByRole('link', { name: 'Cadence', exact: true })).toBeVisible();
+});
+
+test('wishlist blocks owned apps and a full cart before it calls the API', async ({ page }) => {
+  const state = await mockApi(page);
+  await signIn(page);
+  state.wishlist = [3];
+
+  await page.goto('/wishlist');
+  await page.getByRole('button', { name: 'Move Kiln to cart' }).click();
+  await expect(page.getByText('You already own this app.')).toBeVisible();
+  await expect(page.getByRole('link', { name: 'Cart', exact: true })).toBeVisible();
+
+  state.wishlist = [1];
+  state.cartFull = true;
+  await page.reload();
+  await page.getByRole('button', { name: 'Move Cadence to cart' }).click();
+  await expect(
+    page.getByText('Your cart is full (20 apps). Remove one to add another.').first(),
+  ).toBeVisible();
+});
+
+test('an empty wishlist points back to the catalog', async ({ page }) => {
+  await mockApi(page);
+  await signIn(page);
+
+  await page.goto('/wishlist');
+  await expect(page.getByText('Your wishlist is empty.')).toBeVisible();
+  await page.getByRole('link', { name: 'Browse the catalog' }).click();
+  await expect(page).toHaveURL('/');
+});
+
+test('anonymous wishlist visits are redirected to login with the next path', async ({ page }) => {
+  await mockApi(page);
+  await page.goto('/wishlist');
+  await expect(page).toHaveURL('/login?next=%2Fwishlist');
+});
+
 test('an empty cart blocks checkout and returns to the cart', async ({ page }) => {
   await mockApi(page);
   await signIn(page);
@@ -528,6 +699,8 @@ test('an expired session redirects to login and keeps the next path', async ({ p
 });
 
 test('screenshots', async ({ page }, testInfo) => {
+  // The tour walks every page with full-page captures; it outruns the 30s default.
+  test.setTimeout(120_000);
   await mockApi(page);
   await page.goto('/login');
   await page.screenshot({ path: testInfo.outputPath('login.png'), fullPage: true, animations: 'disabled' });
@@ -540,6 +713,8 @@ test('screenshots', async ({ page }, testInfo) => {
   await expect(page.getByRole('heading', { name: 'Cadence', level: 1 })).toBeVisible();
   await page.screenshot({ path: testInfo.outputPath('detail.png'), fullPage: true, animations: 'disabled' });
 
+  await page.getByRole('button', { name: 'Save to wishlist' }).click();
+  await expect(page.getByRole('button', { name: 'Saved to wishlist' })).toBeVisible();
   await page.getByRole('button', { name: 'Add to cart' }).click();
   await page.goto('/cart');
   await expect(page.getByRole('heading', { name: 'Cart' })).toBeVisible();
@@ -557,4 +732,9 @@ test('screenshots', async ({ page }, testInfo) => {
   await page.goto('/orders');
   await expect(page.getByRole('heading', { name: 'Orders' })).toBeVisible();
   await page.screenshot({ path: testInfo.outputPath('orders.png'), fullPage: true, animations: 'disabled' });
+
+  await page.goto('/wishlist');
+  await expect(page.getByRole('heading', { name: 'Wishlist' })).toBeVisible();
+  await expect(page.getByRole('link', { name: 'Cadence', exact: true })).toBeVisible();
+  await page.screenshot({ path: testInfo.outputPath('wishlist.png'), fullPage: true, animations: 'disabled' });
 });

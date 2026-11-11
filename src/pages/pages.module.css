@@ -65,6 +65,19 @@
   margin-bottom: 16px;
 }
 
+.wishlistNotice {
+  animation: wishlist-notice-in 160ms ease-out;
+}
+
+@keyframes wishlist-notice-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
 .backLink {
   display: inline-flex;
   align-items: center;
@@ -239,7 +252,16 @@
 /* ---------- skeletons ---------- */
 
 .cardSkeleton {
+  position: relative;
   border: 1px solid var(--hairline);
+}
+
+.skeletonCoverBadge {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  width: 44px;
+  height: 44px;
 }
 
 .skeletonCover {
@@ -989,5 +1011,83 @@
 
   .pageTitle {
     font-size: 40px;
+  }
+}
+
+/* ---------- wishlist ---------- */
+
+.wishlistColumn {
+  width: min(100%, var(--measure));
+}
+
+.wishlistCountSkeleton {
+  width: 64px;
+  height: 16px;
+}
+
+.noticeLink {
+  color: var(--text);
+  border-bottom: 1px solid currentColor;
+}
+
+.wishlistSkeletonRow {
+  display: grid;
+  grid-template-columns: 96px minmax(0, 1fr) auto;
+  gap: 20px;
+  padding-block: 24px;
+  border-bottom: 1px solid var(--hairline);
+}
+
+.wishlistSkeletonCover {
+  width: 96px;
+  aspect-ratio: 3 / 4;
+}
+
+.wishlistSkeletonText {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding-top: 6px;
+}
+
+.wishlistSkeletonLine {
+  width: 60%;
+  height: 18px;
+}
+
+.wishlistSkeletonLineShort {
+  width: 38%;
+  height: 12px;
+}
+
+.wishlistSkeletonSide {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 12px;
+}
+
+.wishlistSkeletonPrice {
+  width: 88px;
+  height: 20px;
+}
+
+.wishlistSkeletonAction {
+  width: 132px;
+  height: 44px;
+}
+
+@media (max-width: 767px) {
+  .wishlistColumn {
+    width: 100%;
+  }
+
+  .wishlistSkeletonRow {
+    grid-template-columns: 72px minmax(0, 1fr);
+    gap: 14px;
+  }
+
+  .wishlistSkeletonCover {
+    width: 72px;
   }
 }

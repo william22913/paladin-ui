@@ -25,6 +25,7 @@ export interface AppSummary {
   coverUrl: string;
   isOwned: boolean;
   isInCart: boolean;
+  isWishlisted: boolean;
 }
 
 export interface AppDetail extends AppSummary {
@@ -35,6 +36,11 @@ export interface AppDetail extends AppSummary {
 }
 
 export interface CatalogResponse {
+  apps: AppSummary[];
+  count: number;
+}
+
+export interface Wishlist {
   apps: AppSummary[];
   count: number;
 }
@@ -53,6 +59,11 @@ export interface Cart {
   items: CartItem[];
   count: number;
   totalIdr: number;
+}
+
+export interface MoveToCartResult {
+  wishlist: Wishlist;
+  cart: Cart;
 }
 
 export interface OrderItem {
