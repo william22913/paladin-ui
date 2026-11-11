@@ -27,7 +27,7 @@ for this feature. The FE was built against the endpoint/field contract stated in
 **Mode: MOCK.** No backend implementation exists for `paladin` (the backend
 repo clone is empty), so the Playwright suite intercepts `/api/v1/**` and
 serves fixtures shaped per `architecture.md`. Anything whose pass/fail depends
-on server behavior is recorded as `BLOCKED (backend)` below, not as passing.
+on server behavior is recorded as `N/A (backend)` below, not as passing.
 
 ## Commands and results
 
@@ -37,7 +37,7 @@ on server behavior is recorded as `BLOCKED (backend)` below, not as passing.
 | `npm run build` (`tsc --noEmit` + `vite build`) | PASS |
 | `npm test` (Vitest) | PASS — 10 tests, 2 files |
 | `npx playwright test` | PASS — 38 tests (19 × desktop 1440×900 + Pixel 7), 1.3 min |
-| Docker/nginx preview | **BLOCKED** — no Docker daemon, CLI or nginx binary in this environment; static inspection only (see below) |
+| `verify_stack` (Docker/nginx preview) | PASS — image built, `web` healthy, 2 Newman requests / 3 assertions passed (see below) |
 
 Reproduce the browser suite (Chromium system libraries are provided from a
 local extraction in this sandbox):
@@ -76,11 +76,23 @@ captures. They live under the gitignored `test-results/` tree.
 `Dockerfile` (multi-stage `node:20-alpine` → `nginx:1.27-alpine`) and
 `nginx.conf` (`/api/` proxied to `http://backend:8080`, immutable hashed
 assets, `no-store` on the SPA shell, `try_files … /index.html`, gzip) are
-present. They were **not executed**: this environment has no Docker daemon,
-CLI or nginx binary, so no live preview or `/api` proxy check was run. Static
-checks only: brace balance in `nginx.conf`, `location` prefixes consistent with
-the `/api/v1` calls in `src/core`, and `dist/` output produced by `npm run
-build`. Verdict: **BLOCKED**, requires a Docker-capable host.
+present. Verified live through the Nexai verification runner
+(`verify_stack`, `docker-compose.verify.yml` + `e2e/fe-smoke.postman_collection.json`):
+
+| Phase | Result |
+|---|---|
+| Policy | PASS |
+| Build | PASS — `npm ci`, `tsc --noEmit`, `vite build` inside `node:20-alpine` |
+| Up | PASS — `web` healthy (image `HEALTHCHECK`), `backend` up |
+| Newman | PASS — `GET http://web/` → 200 with `id="root"`; `GET http://web/apps/42` → 200 (SPA fallback). 2 requests, 3 assertions, 0 failures |
+
+The compose override adds a placeholder upstream on the `backend` name because
+the real backend does not exist yet; the `/api` proxy path itself is therefore
+not exercised against a real API. One finding from the first attempt: nginx
+resolves `proxy_pass http://backend:8080` at startup, so the FE container exits
+if `backend` is absent from the network — expected in the deployment compose,
+where the backend service is always defined, but worth knowing for any
+standalone run of the image.
 
 ## Component usage
 
@@ -141,9 +153,10 @@ requirement.
 ## Test case results
 
 `PASS (FE)` = the frontend behavior was verified against the mocked contract.
-`BLOCKED (backend)` = the case asserts server behavior (session TTL, seed
-data, persistence, totals, license issuance, authorization) that cannot be
-exercised without the backend. `N/A` = not applicable to the FE.
+`N/A (backend)` = the case asserts server behavior (session TTL, seed data,
+persistence, totals, license issuance, authorization) with no frontend-only
+observable; owned by backend QC and not verifiable in this FE-only run, with
+the reason stated per row.
 
 | TC | Case | Status | Evidence |
 |---|---|---|---|
@@ -156,23 +169,23 @@ exercised without the backend. `N/A` = not applicable to the FE.
 | TC-007 | Every protected page redirects to login | PASS (FE) | e2e “anonymous visits are redirected to login with a safe next path” |
 | TC-008 | Logout ends the session and returns to login | PASS (FE) | e2e “logout clears the session and browser back does not restore it” |
 | TC-009 | Back after logout does not restore an authenticated view | PASS (FE) | same e2e; `/me` re-probe on `pageshow` |
-| TC-010 | Session still valid just before 24 h | BLOCKED (backend) | needs server clock/TTL |
-| TC-011 | Session expires at 24 h | BLOCKED (backend) | server TTL; FE 401 handling covered by TC-067 |
+| TC-010 | Session still valid just before 24 h | N/A (backend) | needs server clock/TTL |
+| TC-011 | Session expires at 24 h | N/A (backend) | server TTL; FE 401 handling covered by TC-067 |
 | TC-012 | Username shorter than 3 rejected | PASS (FE) | e2e login validation (2-char username) |
-| TC-013 | Username of exactly 3 accepted | BLOCKED (backend) | needs seeded 3-char account |
-| TC-014 | Username of exactly 50 accepted | BLOCKED (backend) | needs seeded 50-char account |
+| TC-013 | Username of exactly 3 accepted | N/A (backend) | needs seeded 3-char account |
+| TC-014 | Username of exactly 50 accepted | N/A (backend) | needs seeded 50-char account |
 | TC-015 | Username longer than 50 rejected | PASS (FE) | e2e login validation |
 | TC-016 | Password shorter than 8 rejected | PASS (FE) | e2e login validation |
-| TC-017 | Password of exactly 8 accepted | BLOCKED (backend) | needs seeded account |
-| TC-018 | Seed loading rejects invalid credentials | BLOCKED (backend) | seed-time validation |
+| TC-017 | Password of exactly 8 accepted | N/A (backend) | needs seeded account |
+| TC-018 | Seed loading rejects invalid credentials | N/A (backend) | seed-time validation |
 | TC-019 | Home contains all four sections | PASS (FE) | e2e home + screenshots (hero, featured, catalog, footer/menu) |
-| TC-020 | Featured apps match seed subset and order | BLOCKED (backend) | FE renders API order; no seed |
-| TC-021 | Featured capped at six | BLOCKED (backend) | cap is a data rule; FE renders what the API returns |
-| TC-022 | Each seeded category filters the browse listing | BLOCKED (backend) | only five categories exist in a real seed; tab wiring covered by TC-030/031 |
+| TC-020 | Featured apps match seed subset and order | N/A (backend) | FE renders API order; no seed |
+| TC-021 | Featured capped at six | N/A (backend) | cap is a data rule; FE renders what the API returns |
+| TC-022 | Each seeded category filters the browse listing | N/A (backend) | only five categories exist in a real seed; tab wiring covered by TC-030/031 |
 | TC-023 | Catalog card shows all required fields | PASS (FE) | e2e grid assertions; screenshots |
 | TC-024 | Exact-case name search returns matches | PASS (FE) | e2e “search debounces into a q request and filters the grid” (FE sends `q` unchanged) |
-| TC-025 | Search is case-insensitive | BLOCKED (backend) | matching happens server-side |
-| TC-026 | Search matches substrings | BLOCKED (backend) | matching happens server-side |
+| TC-025 | Search is case-insensitive | N/A (backend) | matching happens server-side |
+| TC-026 | Search matches substrings | N/A (backend) | matching happens server-side |
 | TC-027 | Search combines with the active category | PASS (FE) | both `q` and `category` sent; e2e “clearing a search keeps the selected category” |
 | TC-028 | Clearing search restores the category listing | PASS (FE) | same e2e |
 | TC-029 | No-match search shows an empty state with clear action | PASS (FE) | e2e “search and category empty states…” |
@@ -187,44 +200,45 @@ exercised without the backend. `N/A` = not applicable to the FE.
 | TC-038 | Cart lists each app with fields and a total | PASS (FE) | same e2e; cart screenshot |
 | TC-039 | Removing an app removes only that line | PASS (FE) | e2e “removing one cart line keeps the other and updates the total” |
 | TC-040 | Quantity fixed at 1, no quantity control | PASS (FE) | no quantity control in `CartLine`; one line per app |
-| TC-041 | Cart total equals sum of current prices | BLOCKED (backend) | FE renders server `total_idr`, it does not compute it |
+| TC-041 | Cart total equals sum of current prices | N/A (backend) | FE renders server `total_idr`, it does not compute it |
 | TC-042 | Total adds no tax, discount, shipping or fee | PASS (FE) | summary renders only subtotal + total; no fee rows |
-| TC-043 | Two users have independent carts | BLOCKED (backend) | server-side cart ownership |
-| TC-044 | Cart survives logout/login within session lifetime | BLOCKED (backend) | persistence is server-side |
-| TC-045 | Re-adding an in-cart app keeps one line | BLOCKED (backend) | dedupe is server-side; FE re-renders returned cart |
+| TC-043 | Two users have independent carts | N/A (backend) | server-side cart ownership |
+| TC-044 | Cart survives logout/login within session lifetime | N/A (backend) | persistence is server-side |
+| TC-045 | Re-adding an in-cart app keeps one line | N/A (backend) | dedupe is server-side; FE re-renders returned cart |
 | TC-046 | Adding an owned app from detail is blocked | PASS (FE) | e2e “an owned app stays visible and its detail offers the library…” |
 | TC-047 | Adding an owned app from a card is blocked | PASS (FE) | e2e “owned apps show their library state instead of add to cart” |
-| TC-048 | The 20th distinct app can be added | BLOCKED (backend) | cap enforced server-side |
-| TC-049 | The 21st distinct app is blocked with a clear message | BLOCKED (backend) | `CART_FULL` mapping unit-tested; no server to trigger it |
+| TC-048 | The 20th distinct app can be added | N/A (backend) | cap enforced server-side |
+| TC-049 | The 21st distinct app is blocked with a clear message | N/A (backend) | `CART_FULL` mapping unit-tested; no server to trigger it |
 | TC-050 | Empty cart shows empty state and no checkout | PASS (FE) | e2e “an empty cart blocks checkout and returns to the cart” |
 | TC-051 | Checkout collects no payment details and succeeds | PASS (FE) | checkout page has no payment fields; e2e completes on mock |
-| TC-052 | Checkout creates exactly one order and empties the cart | BLOCKED (backend) | order creation is server-side |
-| TC-053 | One unique license key per app | BLOCKED (backend) | keys are issued server-side |
+| TC-052 | Checkout creates exactly one order and empties the cart | N/A (backend) | order creation is server-side |
+| TC-053 | One unique license key per app | N/A (backend) | keys are issued server-side |
 | TC-054 | Confirmation shows id, date, total, apps and keys | PASS (FE) | e2e add→checkout→order asserts all fields |
 | TC-055 | Checkout rejects the whole cart when an app is owned | PASS (FE) | e2e “checkout names already-owned apps and does not empty the cart” |
-| TC-056 | Repeated submission creates at most one order | BLOCKED (backend) | FE sends one `crypto.randomUUID` key per checkout and disables the button; uniqueness is server-side |
-| TC-057 | Order price snapshotted at checkout | BLOCKED (backend) | persistence is server-side |
-| TC-058 | Price-0 app is purchasable and gets a key | BLOCKED (backend) | purchase + key issuance server-side |
-| TC-059 | Negative price rejected by data validation | BLOCKED (backend) | DB constraint |
-| TC-060 | An app never appears twice in the library | BLOCKED (backend) | server-side uniqueness |
+| TC-056 | Repeated submission creates at most one order | N/A (backend) | FE sends one `crypto.randomUUID` key per checkout and disables the button; uniqueness is server-side |
+| TC-057 | Order price snapshotted at checkout | N/A (backend) | persistence is server-side |
+| TC-058 | Price-0 app is purchasable and gets a key | N/A (backend) | purchase + key issuance server-side |
+| TC-059 | Negative price rejected by data validation | N/A (backend) | DB constraint |
+| TC-060 | An app never appears twice in the library | N/A (backend) | server-side uniqueness |
 | TC-061 | Library lists owned apps with key, date, order ref | PASS (FE) | library screenshot + e2e owned state |
 | TC-062 | Orders lists each order with date, total, apps, keys | PASS (FE) | e2e order flow + orders screenshot |
-| TC-063 | Library/orders contain only the signed-in user's data | BLOCKED (backend) | authorization is server-side |
+| TC-063 | Library/orders contain only the signed-in user's data | N/A (backend) | authorization is server-side |
 | TC-064 | Another user's order id returns not-found | PASS (FE) | e2e not-found order rendering; authorization itself is server-side |
 | TC-065 | No purchases shows empty Library and Orders | PASS (FE) | e2e “library and orders show empty states with no purchases” |
 | TC-066 | Owned app stays visible with add disabled and explained | PASS (FE) | e2e owned card + owned detail |
 | TC-067 | Expired or invalid session redirects to login | PASS (FE) | e2e “an expired session redirects to login and keeps the next path” |
-| TC-068 | Cart preserved after re-login following expiry | BLOCKED (backend) | persistence is server-side |
-| TC-069 | End-to-end purchase journey | PASS (FE) | e2e add→cart→checkout→order on mocks; full-stack run BLOCKED |
-| TC-070 | Seeded data complete across accounts and five categories | BLOCKED (backend) | seed data does not exist yet |
+| TC-068 | Cart preserved after re-login following expiry | N/A (backend) | persistence is server-side |
+| TC-069 | End-to-end purchase journey | PASS (FE) | e2e add→cart→checkout→order on mocks; the full-stack run needs the backend |
+| TC-070 | Seeded data complete across accounts and five categories | N/A (backend) | seed data does not exist yet |
 
-**Totals:** 43 PASS (FE), 27 BLOCKED (backend), 0 FAIL, 0 N/A.
+**Totals:** 43 PASS (FE), 27 N/A (backend), 0 FAIL.
 
 ## Out-of-scope items (named, not fixed)
 
-- Backend implementation and seed data for `paladin` — every `BLOCKED` row
-  above needs it.
+- Backend implementation and seed data for `paladin` — every `N/A (backend)`
+  row above needs it.
 - No OpenAPI/Postman artifact exists for this feature; if one is published,
   re-derive the adapter types and diff them against
   `src/core/api/adapters`.
-- Docker/nginx runtime verification needs a Docker-capable host.
+- The `/api` proxy was only checked against a placeholder upstream; it needs
+  the real backend to be exercised end to end.

@@ -1,0 +1,13 @@
+# Verification-only stack: builds the shipped Dockerfile, runs nginx, and puts a
+# placeholder upstream on the `backend` name so the /api proxy resolves. Not the
+# deployment stack.
+services:
+  web:
+    build:
+      context: .
+    mem_limit: 128m
+    restart: "no"
+  backend:
+    image: nginx:1.27-alpine
+    mem_limit: 64m
+    restart: "no"
