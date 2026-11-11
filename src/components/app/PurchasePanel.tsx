@@ -7,6 +7,7 @@ import { InCartTag, OwnedTag } from '../ui/Tag';
 import { LinkButton } from '../ui/LinkButton';
 import { PriceLabel } from '../ui/PriceLabel';
 import { Rating } from '../ui/Rating';
+import { WishlistButton } from './WishlistButton';
 import styles from './app.module.css';
 
 /** Sticky desktop panel; sticky bottom bar on phones (UIMap App detail). */
@@ -14,6 +15,7 @@ export function PurchasePanel({ app }: { app: AppSummary }) {
   const { cart, count, add } = useCart();
   const [adding, setAdding] = useState(false);
   const [message, setMessage] = useState('');
+  const [wishlistMessage, setWishlistMessage] = useState('');
 
   const inCart =
     app.isInCart || Boolean(cart?.items.some((item) => item.appId === app.id));
@@ -45,29 +47,38 @@ export function PurchasePanel({ app }: { app: AppSummary }) {
         <Rating value={app.rating} />
       </div>
 
-      {app.isOwned ? (
-        <>
-          <OwnedTag label="In your library" />
-          <LinkButton to="/library" variant="secondary" block>
-            View in my library
-          </LinkButton>
-        </>
-      ) : inCart ? (
-        <>
-          <InCartTag />
-          <LinkButton to="/cart" variant="secondary" block>
-            View cart
-          </LinkButton>
-        </>
-      ) : (
-        <Button block onClick={() => void handleAdd()} disabled={adding}>
-          {adding ? 'Adding' : 'Add to cart'}
-        </Button>
-      )}
+      <div className={styles.panelActions}>
+        {app.isOwned ? (
+          <>
+            <OwnedTag label="In your library" />
+            <LinkButton to="/library" variant="secondary" block>
+              View in my library
+            </LinkButton>
+          </>
+        ) : inCart ? (
+          <>
+            <InCartTag />
+            <LinkButton to="/cart" variant="secondary" block>
+              View cart
+            </LinkButton>
+          </>
+        ) : (
+          <Button block onClick={() => void handleAdd()} disabled={adding}>
+            {adding ? 'Adding' : 'Add to cart'}
+          </Button>
+        )}
 
-      {message ? (
+        <WishlistButton
+          app={app}
+          variant="block"
+          className={styles.panelWishlist}
+          onError={setWishlistMessage}
+        />
+      </div>
+
+      {message || wishlistMessage ? (
         <p className={styles.panelError} role="alert">
-          {message}
+          {message || wishlistMessage}
         </p>
       ) : null}
 

@@ -30,6 +30,21 @@
           }
         }
       ]
+    },
+    {
+      "name": "Wishlist route falls back to the shell",
+      "request": { "method": "GET", "url": "http://web/wishlist" },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('200', () => pm.response.to.have.status(200));",
+              "pm.test('SPA shell', () => pm.expect(pm.response.text()).to.include('id=\"root\"'));"
+            ]
+          }
+        }
+      ]
     }
   ]
 }

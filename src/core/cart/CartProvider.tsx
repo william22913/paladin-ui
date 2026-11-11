@@ -23,6 +23,8 @@ interface CartContextValue {
   refresh: () => Promise<void>;
   add: (appId: number) => Promise<void>;
   remove: (appId: number) => Promise<void>;
+  /** Move-to-cart returns the whole cart, so the badge updates without a refetch. */
+  replace: (next: Cart) => void;
   clear: () => void;
 }
 
@@ -64,11 +66,13 @@ export function CartProvider({ children }: { children: ReactNode }) {
     setCart(await removeRequest(appId));
   }, []);
 
+  const replace = useCallback((next: Cart) => setCart(next), []);
+
   const clear = useCallback(() => setCart(null), []);
 
   const value = useMemo(
-    () => ({ cart, count: cart?.count ?? 0, loading, error, refresh, add, remove, clear }),
-    [cart, loading, error, refresh, add, remove, clear],
+    () => ({ cart, count: cart?.count ?? 0, loading, error, refresh, add, remove, replace, clear }),
+    [cart, loading, error, refresh, add, remove, replace, clear],
   );
 
   return <CartContext.Provider value={value}>{children}</CartContext.Provider>;
