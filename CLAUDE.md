@@ -16,3 +16,4 @@ Paladin storefront (React + Vite + TypeScript). Plain React with CSS Modules;
 ## Feature docs
 
 - [FEAT-001 storefront v1](docs/FEAT-001/spec.md) — spec, architecture, database, UI map and test cases in `docs/FEAT-001/`
+- [FEAT-002 wishlist](docs/FEAT-002/spec.md) — spec, architecture, database, UI map and test cases in `docs/FEAT-002/`
